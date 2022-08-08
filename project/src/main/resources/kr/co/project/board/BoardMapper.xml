@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.project.board.BoardMapper"> <!-- src/main/java 안의 인터페이스 폴더 경로와 일치해야함 -->
+
+	<insert id="insert" parameterType="kr.co.project.board.BoardVO"> <!-- 인터페이스에도 insert가 잇어야함 -->
+		INSERT INTO board (title,content,regdate,viewcount,member_no,filename_org,filename_real)
+		VALUES (#{title},#{content},NOW(),0,#{member_no},#{filename_org},#{filename_real})
+		<!-- inset는 #쓰는게 좋음/ #은 자동으로 ''이 붙음/{BoardVO안에 있어야함}  -->
+		<!-- sql에서는 null값 에러 안남 / 오라클은 null 에러 / no는 ai로 지정해서 insert안해도 저절로 1씩증가 -->
+	</insert>
+	
+	<select id="count" parameterType="kr.co.project.board.BoardVO" resultType="java.lang.Integer"> <!--인트로 리턴 못하므로/오토언박싱됨 java.long.Integer=> int로 사용가능  where   title LIKE '%%' , content LIKE '%%' , TITLE like '%%' or content LIKE '%%' -->
+		SELECT COUNT(*) FROM board <!-- 테이블명도 $ -->
+		<where> <!-- 검색을 안하면 WHERE을 사용하면 안되므로 동적으로 반응하도록 사용 /WHERE 1=1 도 사용 --> 
+			<if test="stype !=null and stype != ''"> 
+				<if test="stype !='all'"><!-- ${있는 그대로 삽입} -->
+					${stype} LIKE '%${sword}%' <!-- 컬럼명은 무조건 $ -->
+				</if>
+				<if test="stype == 'all'">
+					 title LIKE '%${sword}%' OR content LIKE '%${sword}%'
+				</if>
+			</if> 
+		</where>
+	</select>
+	
+	<select id="list" parameterType="kr.co.project.board.BoardVO" resultType="kr.co.project.board.BoardVO">
+		select *,
+			(select name from member where no=board.member_no) AS member_name,
+			(select count(*) from comment where board_no = board.no and tablename='board') as commnet_count
+		from board 
+		<where> 
+			<if test="stype !=null and stype != ''">
+				<if test="stype !='all'">
+					${stype} LIKE '%${sword}%'
+				</if>
+				<if test="stype == 'all'"> <!-- 모든속성에 값이 다 있으면 -->
+					 title LIKE '%${sword}%' OR content LIKE '%${sword}%'
+				</if>
+			</if> 
+		</where>
+		order by regdate desc
+ 		Limit ${startIdx},${pageRow};
+	</select>
+	
+	<select id="view" parameterType="int" resultType="kr.co.project.board.BoardVO">
+		SELECT * from board WHERE no=#{xxxx} <!-- 파라미터 값이 하나이므로 {안에 아무거나 써도 상관없음} --> 
+	</select>
+	
+	<update id="updateViewcount" parameterType="int">
+		UPDATE board set viewcount = viewcount+1 WHERE no = #{no}
+	</update>
+	
+	<update id="update" parameterType="kr.co.project.board.BoardVO">
+		UPDATE board set title=#{title},content=#{content}
+		<if test="filename_org != null">
+			,filename_org = #{filename_org},filename_real=#{filename_real}
+		</if>
+		 WHERE no = #{no}
+	</update>
+	
+	<delete id="delete" parameterType="int">
+		DELETE FROM board WHERE no=#{no}
+	</delete>
+</mapper>

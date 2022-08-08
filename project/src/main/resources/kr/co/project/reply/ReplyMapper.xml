@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.project.reply.ReplyMapper">
+
+	<insert id="insert" parameterType="kr.co.project.reply.ReplyVO"> 
+		INSERT INTO reply (title,content,regdate,viewcount,member_no,filename_org,filename_real)
+		VALUES (#{title},#{content},NOW(),0,#{member_no},#{filename_org},#{filename_real})
+		<selectKey keyProperty="no" resultType="int" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="count" parameterType="kr.co.project.reply.ReplyVO" resultType="java.lang.Integer"> 
+		SELECT COUNT(*) FROM reply 
+		<where> 
+			<if test="stype !=null and stype != ''"> 
+				<if test="stype !='all'">
+					${stype} LIKE '%${sword}%'
+				</if>
+				<if test="stype == 'all'">
+					 title LIKE '%${sword}%' OR content LIKE '%${sword}%'
+				</if>
+			</if> 
+		</where>
+	</select>
+	
+	<select id="list" parameterType="kr.co.project.reply.ReplyVO" resultType="kr.co.project.reply.ReplyVO">
+		select *,
+			(select name from member where no=reply.member_no) AS member_name,
+			(select count(*) from comment where board_no = reply.no and tablename='reply') as commnet_count
+		from reply 
+		<where> 
+			<if test="stype !=null and stype != ''">
+				<if test="stype !='all'">
+					${stype} LIKE '%${sword}%'
+				</if>
+				<if test="stype == 'all'"> <!-- 모든속성에 값이 다 있으면 -->
+					 title LIKE '%${sword}%' OR content LIKE '%${sword}%'
+				</if>
+			</if> 
+		</where>
+		order by gno DESC,ono ASC
+ 		Limit ${startIdx},${pageRow};
+	</select>
+	
+	<select id="view" parameterType="int" resultType="kr.co.project.reply.ReplyVO">
+		SELECT * from reply WHERE no=#{xxxx} <!-- 파라미터 값이 하나이므로 {안에 아무거나 써도 상관없음} --> 
+	</select>
+	
+	<update id="updateViewcount" parameterType="int">
+		UPDATE reply set viewcount = viewcount+1 WHERE no = #{no}
+	</update>
+	
+	<update id="update" parameterType="kr.co.project.reply.ReplyVO">
+		UPDATE reply set title=#{title},content=#{content}
+		<if test="filename_org != null">
+			,filename_org = #{filename_org},filename_real=#{filename_real}
+		</if>
+		 WHERE no = #{no}
+	</update>
+	
+	<delete id="delete" parameterType="int">
+		DELETE FROM reply WHERE no=#{no}
+	</delete>
+	
+	<update id="gnoUpdate" parameterType="int">
+		UPDATE reply SET gno=#{gno} WHERE no=#{gno}	
+	</update>
+	 
+	<update id="onoUpdate" parameterType="kr.co.project.reply.ReplyVO"><!-- 현재입력값보다 크면 그전 ono에 +1해줘라 -->
+		UPDATE reply SET ono=ono+1 WHERE gno=#{gno} AND ono>#{ono}	 
+	</update>
+	
+	<insert id="reply" parameterType="kr.co.project.reply.ReplyVO">
+		INSERT INTO reply (title,content,regdate,viewcount,member_no,filename_org,filename_real,gno,ono,nested)
+		VALUES (#{title},#{content},NOW(),0,#{member_no},#{filename_org},#{filename_real},#{gno},#{ono},#{nested})
+	</insert>
+	
+</mapper>
